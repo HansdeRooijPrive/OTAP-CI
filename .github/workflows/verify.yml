@@ -1,0 +1,17 @@
+name: Verify build (reusable)
+
+# Controleert dat de ingecheckte index.html overeenkomt met een verse
+# productie-build uit src/ (build.py --check).
+
+on:
+  workflow_call: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
+      - name: index.html == build van src/
+        run: python build.py --check

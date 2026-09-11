@@ -1,0 +1,55 @@
+name: OTAP deploy (reusable)
+
+# Herbruikbare workflow: bouwt de drie omgevingen van een app en publiceert ze
+# op één GitHub Pages-site:
+#   main         -> /            (Productie)
+#   acceptatie   -> /acceptatie/ (Acceptatie)
+#   development  -> /test/       (Test)
+# Elke omgeving wordt gebouwd met `python build.py --env=<prod|acc|test>`, dat de
+# thema-kleur en de opslagsleutels per omgeving zet (isolatie). Branches die nog
+# niet bestaan worden overgeslagen.
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout productie (main)
+        uses: actions/checkout@v4
+        with: { ref: main, path: prod, fetch-depth: 1 }
+
+      - name: Checkout acceptatie (indien aanwezig)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: { ref: acceptatie, path: acc, fetch-depth: 1 }
+
+      - name: Checkout test (development, indien aanwezig)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: { ref: development, path: test, fetch-depth: 1 }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
+
+      - name: Bouw alle omgevingen
+        run: |
+          mkdir -p dist
+          (cd prod && python build.py --env=prod --out ../dist/index.html)
+          if [ -f acc/build.py ];  then (cd acc  && python build.py --env=acc  --out ../dist/acceptatie/index.html); fi
+          if [ -f test/build.py ]; then (cd test && python build.py --env=test --out ../dist/test/index.html); fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

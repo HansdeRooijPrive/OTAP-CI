@@ -1,0 +1,24 @@
+name: Tests (reusable)
+
+# Draait de geautomatiseerde tests van een app (Playwright + pytest), mits er een
+# tests/-map is. Zonder tests/ wordt de stap netjes overgeslagen.
+
+on:
+  workflow_call: {}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
+      - name: Tests (indien aanwezig)
+        run: |
+          if [ -d tests ]; then
+            pip install -r requirements-test.txt
+            python -m playwright install --with-deps chromium
+            pytest -q
+          else
+            echo "Geen tests/-map — overgeslagen."
+          fi
