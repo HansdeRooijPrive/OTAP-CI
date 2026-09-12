@@ -1,4 +1,4 @@
-# otap-ci — generieke CI/CD-straat voor kleine web-apps
+# OTAP-CI — generieke CI/CD-straat voor kleine web-apps
 
 Herbruikbare GitHub Actions-workflows voor een OTAP-straat op GitHub Pages.
 Elke app is een eigen repo (gemaakt uit een template), volgt dezelfde conventie
@@ -27,7 +27,7 @@ aparte origins = automatisch geïsoleerd.
 | `verify.yml` | `build.py --check` — index.html moet overeenkomen met src/ |
 | `tests.yml`  | Playwright + pytest (indien de app een `tests/`-map heeft) |
 
-Een app roept ze aan met bijv. `uses: HansdeRooijPrive/otap-ci/.github/workflows/deploy.yml@v1`.
+Een app roept ze aan met bijv. `uses: HansdeRooijPrive/OTAP-CI/.github/workflows/deploy.yml@v1`.
 
 ## Conventie waaraan een app voldoet
 
