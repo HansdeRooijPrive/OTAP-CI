@@ -69,6 +69,22 @@ Placeholders die de bouwstap invult:
 
 Een app roept ze aan met bijv. `uses: HansdeRooijPrive/OTAP-CI/.github/workflows/deploy.yml@v2`.
 
+**Rechten voor `deploy.yml`.** De aanroepende workflow van de app geeft:
+
+```yaml
+permissions:
+  contents: write   # voor de losse publicatie-commit (zie hieronder)
+  pages: write
+  id-token: write
+```
+
+Waarom `contents: write`: GitHub Pages activeert geen publicatie van een commit
+die al live staat vanaf een andere branch. Bij doorzetten (development →
+acceptatie → main) is dat precies zo, en dan bleef acceptatie de oude versie
+tonen. `deploy.yml` maakt daarom per publicatie een losse commit met exact
+dezelfde inhoud en publiceert daarmee; er wordt geen branch verplaatst. Zonder
+`contents: write` publiceert de workflow zoals vroeger, met een waarschuwing.
+
 ## Conventie waaraan een app voldoet
 
 ```

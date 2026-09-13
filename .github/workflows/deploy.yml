@@ -9,12 +9,23 @@ name: OTAP deploy (reusable)
 # de app heeft alleen een dunne build.py. Branches die nog een volledige,
 # eigen build.py hebben (v1) bouwen gewoon zoals voorheen.
 # Branches die nog niet bestaan worden overgeslagen.
+#
+# Publiceren gebeurt NIET met actions/deploy-pages. Die gebruikt de commit van
+# de run als Pages-versie, en Pages activeert geen publicatie van een commit
+# die al live staat vanaf een andere branch. Bij doorzetten (development ->
+# acceptatie -> main, dezelfde commit) bleef acceptatie daardoor de oude versie
+# tonen. Deze workflow maakt per publicatie een losse commit met exact dezelfde
+# inhoud als de run-commit en gebruikt die als versie. Er wordt GEEN branch
+# verplaatst: acceptatie en main wijzen nog steeds naar de geteste commit.
+#
+# Aanroeper: geef `contents: write` (nodig voor die losse commit). Zonder dat
+# recht publiceert deze workflow zoals vroeger, met een waarschuwing in het log.
 
 on:
   workflow_call: {}
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -55,8 +66,48 @@ jobs:
           if [ -f acc/build.py ];  then (cd acc  && python build.py --env=acc  --out ../dist/acceptatie/index.html); fi
           if [ -f test/build.py ]; then (cd test && python build.py --env=test --out ../dist/test/index.html); fi
 
-      - uses: actions/upload-pages-artifact@v3
+      - id: upload
+        uses: actions/upload-pages-artifact@v3
         with: { path: dist }
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        name: Publiceren naar Pages (uniek versienummer per publicatie)
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo
+            // 1. Versie: een losse commit met dezelfde inhoud als de run-commit (geen branch).
+            let versie = context.sha
+            try {
+              const { data: basis } = await github.request('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { owner, repo, commit_sha: context.sha })
+              const { data: los } = await github.request('POST /repos/{owner}/{repo}/git/commits', {
+                owner, repo,
+                message: `Pages-publicatie van ${context.sha} (run ${process.env.GITHUB_RUN_ID}.${process.env.GITHUB_RUN_ATTEMPT})`,
+                tree: basis.tree.sha,
+                parents: [context.sha]
+              })
+              versie = los.sha
+              core.info(`Publicatieversie ${versie}: losse commit met dezelfde inhoud als ${context.sha}`)
+            } catch (e) {
+              core.warning(`Geen losse commit mogelijk (HTTP ${e.status}); publiceer met ${context.sha}. Geef in de aanroepende workflow 'contents: write', anders komt een promotie naar acceptatie of productie mogelijk niet live.`)
+            }
+            // 2. Pages-publicatie met die versie.
+            const { data: dep } = await github.request('POST /repos/{owner}/{repo}/pages/deployments', {
+              owner, repo,
+              artifact_id: Number(process.env.ARTIFACT_ID),
+              pages_build_version: versie,
+              oidc_token: await core.getIDToken()
+            })
+            if (dep.page_url) core.setOutput('page_url', dep.page_url)
+            // 3. Wachten tot Pages klaar is.
+            const id = dep.id || versie
+            const fout = ['deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_lost', 'deployment_perms_error', 'deployment_attempt_error']
+            for (let i = 0; i < 120; i++) {
+              const { data: st } = await github.request('GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}', { owner, repo, pages_deployment_id: id })
+              if (st.status === 'succeed') { core.info('Pages-publicatie geslaagd'); return }
+              if (fout.includes(st.status)) throw new Error('Pages-publicatie mislukt: ' + st.status)
+              await new Promise(r => setTimeout(r, 5000))
+            }
+            throw new Error('Pages-publicatie niet binnen 10 minuten klaar')
