@@ -101,7 +101,7 @@ def _vervangingen(env, app):
     kort = cfg.get("short_name", naam)
     naam_env = naam + NAAM_SUFFIX[env]
     kort_env = kort + NAAM_SUFFIX[env]
-    return {
+    basis = {
         "{{APP_NAME}}": naam,
         "{{APP_NAME_URL}}": urllib.parse.quote(naam),
         "{{APP_SHORT}}": kort,
@@ -117,6 +117,29 @@ def _vervangingen(env, app):
         "{{MERK_DONKER}}": th.get("merk_donker", "#111111"),
         "{{MERK_LICHT}}": th.get("merk_licht", "#555555"),
     }
+    return _met_eigen_waarden(basis, cfg, env)
+
+
+def _met_eigen_waarden(basis, cfg, env):
+    """Eigen placeholders per omgeving uit app.json, onder "waarden". Voorbeeld:
+    "waarden": {"OMG_SUFFIX": {"prod": "", "acc": "-acc", "test": "-test"}}
+    maakt {{OMG_SUFFIX}} beschikbaar. Handig als een app naast de opslagsleutel
+    nog andere namen per omgeving moet scheiden (een database, een bestandsnaam)."""
+    eigen = cfg.get("waarden") or {}
+    if not isinstance(eigen, dict):
+        raise PlatformFout("app.json: 'waarden' moet een object zijn")
+    for naam, per_env in eigen.items():
+        geldig = (isinstance(naam, str) and naam[:1].isalpha() and naam == naam.upper()
+                  and naam.replace("_", "").isalnum())
+        if not geldig:
+            raise PlatformFout("app.json: waarde %r: gebruik alleen HOOFDLETTERS, cijfers en _" % naam)
+        sleutel = "{{%s}}" % naam
+        if sleutel in basis:
+            raise PlatformFout("app.json: waarde %r botst met een ingebouwde placeholder" % naam)
+        if not isinstance(per_env, dict) or any(e not in per_env for e in ENVS):
+            raise PlatformFout("app.json: waarde %r moet prod, acc en test allemaal opgeven" % naam)
+        basis[sleutel] = str(per_env[env])
+    return basis
 
 
 # Tekstbestanden in public/ krijgen dezelfde placeholders; de rest wordt 1-op-1 gekopieerd.

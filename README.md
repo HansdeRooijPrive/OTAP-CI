@@ -59,6 +59,25 @@ Placeholders die de bouwstap invult:
 `{{ICOON}}`, `{{STORAGE_KEY}}`, `{{ENV}}`, `{{ENV_LABEL}}`,
 `{{MERK}}`, `{{MERK_DONKER}}`, `{{MERK_LICHT}}`, en in de romp `{{STYLES}}`, `{{SCRIPT}}`.
 
+### Eigen waarden per omgeving: `waarden` in `app.json`
+
+Moet een app naast de opslagsleutel nog andere namen per omgeving scheiden (een
+IndexedDB-database, een bestandsnaam, een URL-gecodeerde kleur), dan kan dat met
+eigen placeholders:
+
+```json
+"waarden": {
+  "OMG_SUFFIX": { "prod": "",          "acc": "-acc",      "test": "-test" },
+  "THEMA_URL":  { "prod": "%23cc0000", "acc": "%23b45309", "test": "%230f7a45" }
+}
+```
+
+Daarmee wordt `{{OMG_SUFFIX}}` en `{{THEMA_URL}}` overal ingevuld waar de gewone
+placeholders ook werken. De bouwstap stopt als een naam niet uit HOOFDLETTERS,
+cijfers en `_` bestaat, botst met een ingebouwde placeholder, of niet voor alle drie
+de omgevingen is opgegeven. Zo kan een bestaande app haar productienamen letterlijk
+behouden (bijv. `kilometerdeclaratie{{OMG_SUFFIX}}` → `kilometerdeclaratie`).
+
 ### Losse bestanden: `public/`
 
 Heeft een app bestanden die naast `index.html` moeten staan (routedata, een
