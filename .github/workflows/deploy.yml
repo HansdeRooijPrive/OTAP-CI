@@ -5,9 +5,10 @@ name: OTAP deploy (reusable)
 #   main         -> /            (Productie)
 #   acceptatie   -> /acceptatie/ (Acceptatie)
 #   development  -> /test/       (Test)
-# Elke omgeving wordt gebouwd met `python build.py --env=<prod|acc|test>`, dat de
-# thema-kleur en de opslagsleutels per omgeving zet (isolatie). Branches die nog
-# niet bestaan worden overgeslagen.
+# Vanaf v2 draait de bouwlogica centraal (bouw/otap_build.py uit deze repo);
+# de app heeft alleen een dunne build.py. Branches die nog een volledige,
+# eigen build.py hebben (v1) bouwen gewoon zoals voorheen.
+# Branches die nog niet bestaan worden overgeslagen.
 
 on:
   workflow_call: {}
@@ -23,6 +24,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      OTAP_CI_DIR: ${{ github.workspace }}/.otap-ci
     steps:
       - name: Checkout productie (main)
         uses: actions/checkout@v4
@@ -37,6 +40,10 @@ jobs:
         uses: actions/checkout@v4
         continue-on-error: true
         with: { ref: development, path: test, fetch-depth: 1 }
+
+      - name: Centrale bouwstap (OTAP-CI v2)
+        uses: actions/checkout@v4
+        with: { repository: HansdeRooijPrive/OTAP-CI, ref: v2, path: .otap-ci, fetch-depth: 1 }
 
       - uses: actions/setup-python@v5
         with: { python-version: '3.x' }

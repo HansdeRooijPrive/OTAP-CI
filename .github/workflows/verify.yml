@@ -1,7 +1,8 @@
 name: Verify build (reusable)
 
-# Controleert dat de ingecheckte index.html overeenkomt met een verse
-# productie-build uit src/ (build.py --check).
+# Controleert de platformafspraken (naam en icoon per omgeving, opslagsleutels)
+# en dat de ingecheckte index.html overeenkomt met een verse productie-build
+# uit src/ (build.py --check). De bouwlogica komt centraal uit OTAP-CI v2.
 
 on:
   workflow_call: {}
@@ -9,9 +10,14 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      OTAP_CI_DIR: ${{ github.workspace }}/.otap-ci
     steps:
       - uses: actions/checkout@v4
+      - name: Centrale bouwstap (OTAP-CI v2)
+        uses: actions/checkout@v4
+        with: { repository: HansdeRooijPrive/OTAP-CI, ref: v2, path: .otap-ci, fetch-depth: 1 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.x' }
-      - name: index.html == build van src/
+      - name: Afspraken + index.html == build van src/
         run: python build.py --check
