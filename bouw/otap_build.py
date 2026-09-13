@@ -69,7 +69,13 @@ def iconen(app):
         with open(pad, "rb") as f:
             data = f.read()
         if not data.startswith(PNG_HANDTEKENING):
-            raise PlatformFout("src/icons/icon.%s.png is geen PNG-bestand" % env)
+            beschadigd = data.startswith(b"\x89PNG\n\x1a\n")
+            raise PlatformFout(
+                "src/icons/icon.%s.png is %s. Zet in .gitattributes: src/icons/*.png binary, "
+                "en leg de iconen opnieuw vast." % (
+                    env,
+                    "beschadigd door regeleinde-conversie in Git" if beschadigd
+                    else "geen geldig PNG-bestand"))
         gelezen[env] = data
     for i, a in enumerate(ENVS):
         for b in ENVS[i + 1:]:

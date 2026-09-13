@@ -83,7 +83,11 @@ tests/                   optionele Playwright/pytest-tests
 index.html               ingecheckte productie-build (build.py --env=prod)
 .github/workflows/       dunne callers naar deze repo
 .gitignore               met .otap/
+.gitattributes           src/** text eol=lf, maar src/icons/*.png binary
 ```
+
+Let op die laatste regel: zonder `binary` haalt Git regeleinden uit de PNG-iconen
+en zijn ze na vastleggen beschadigd. De bouwstap herkent dat en zegt het erbij.
 
 ## Nieuwe app (beheerd via Claude, vanuit de platformsessie)
 
