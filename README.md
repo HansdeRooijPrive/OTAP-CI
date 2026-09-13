@@ -59,6 +59,27 @@ Placeholders die de bouwstap invult:
 `{{ICOON}}`, `{{STORAGE_KEY}}`, `{{ENV}}`, `{{ENV_LABEL}}`,
 `{{MERK}}`, `{{MERK_DONKER}}`, `{{MERK_LICHT}}`, en in de romp `{{STYLES}}`, `{{SCRIPT}}`.
 
+### Losse bestanden: `public/`
+
+Heeft een app bestanden die naast `index.html` moeten staan (routedata, een
+service worker, een manifest), dan horen die in `public/`. De bouwstap kopieert
+die map per omgeving mee naar de uitvoermap (alleen bij `--out` naar een andere
+map dan de app zelf). In tekstbestanden (`.js`, `.json`, `.webmanifest`, `.html`,
+`.css`, `.txt`, `.svg`, `.xml`) worden dezelfde placeholders ingevuld; andere
+bestanden worden ongewijzigd gekopieerd.
+
+Service workers: laat cachenamen beginnen met `{{STORAGE_KEY}}-` zodat omgevingen
+geen caches delen (caches gelden voor het hele domein, niet per pad), en laat de
+productie-worker verzoeken onder `acceptatie/` en `test/` negeren.
+
+### Branches die nog niet op het platform staan
+
+Heeft een branch geen `build.py` maar wel een `index.html` (bijvoorbeeld `main`
+tijdens het onboarden van een bestaande app), dan publiceert `deploy.yml` die
+branch ongewijzigd, zonder de verborgen bestanden en `README.md`. In het log staat
+dan een melding. Zo blijft productie gewoon online terwijl `development` al op het
+platform draait.
+
 ## Herbruikbare workflows
 
 | Workflow | Doel |

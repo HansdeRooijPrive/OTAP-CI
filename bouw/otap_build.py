@@ -92,7 +92,7 @@ def _apply(text, repl):
     return text
 
 
-def build(env, app):
+def _vervangingen(env, app):
     if env not in ENVS:
         raise SystemExit("onbekende omgeving: %s (kies uit %s)" % (env, ", ".join(ENVS)))
     cfg = config(app)
@@ -101,7 +101,7 @@ def build(env, app):
     kort = cfg.get("short_name", naam)
     naam_env = naam + NAAM_SUFFIX[env]
     kort_env = kort + NAAM_SUFFIX[env]
-    repl = {
+    return {
         "{{APP_NAME}}": naam,
         "{{APP_NAME_URL}}": urllib.parse.quote(naam),
         "{{APP_SHORT}}": kort,
@@ -117,6 +117,40 @@ def build(env, app):
         "{{MERK_DONKER}}": th.get("merk_donker", "#111111"),
         "{{MERK_LICHT}}": th.get("merk_licht", "#555555"),
     }
+
+
+# Tekstbestanden in public/ krijgen dezelfde placeholders; de rest wordt 1-op-1 gekopieerd.
+TEKST_EXT = {".js", ".json", ".webmanifest", ".html", ".css", ".txt", ".svg", ".xml"}
+
+
+def kopieer_public(env, app, doelmap):
+    """Kopieert public/ van de app naar de uitvoermap van deze omgeving, zodat losse
+    bestanden (routedata, service worker, manifest) per omgeving naast index.html staan."""
+    import shutil
+    bron = os.path.join(app, "public")
+    if not os.path.isdir(bron):
+        return 0
+    repl = _vervangingen(env, app)
+    aantal = 0
+    for map_, _, bestanden in os.walk(bron):
+        for naam in bestanden:
+            van = os.path.join(map_, naam)
+            naar = os.path.join(doelmap, os.path.relpath(van, bron))
+            os.makedirs(os.path.dirname(naar), exist_ok=True)
+            if os.path.splitext(naam)[1].lower() in TEKST_EXT:
+                with open(van, encoding="utf-8") as f:
+                    tekst = _apply(f.read(), repl)
+                with open(naar, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(tekst)
+            else:
+                shutil.copyfile(van, naar)
+            aantal += 1
+    return aantal
+
+
+def build(env, app):
+    repl = _vervangingen(env, app)
+    naam_env = repl["{{APP_NAME_ENV}}"]
     stukken = lambda map_: "".join(  # noqa: E731
         _lees(app, os.path.relpath(p, app))
         for p in sorted(glob.glob(os.path.join(app, "src", map_, "*.js"))))
@@ -160,6 +194,13 @@ def main(argv, app):
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print("gebouwd (%s): %s (%d bytes)" % (args.env, out, len(html)))
+    # Losse bestanden alleen meenemen bij een aparte uitvoermap (zoals in de deploy),
+    # nooit in de app zelf.
+    doelmap = os.path.dirname(os.path.abspath(out))
+    if args.out and os.path.normcase(doelmap) != os.path.normcase(os.path.abspath(app)):
+        aantal = kopieer_public(args.env, app, doelmap)
+        if aantal:
+            print("public/: %d bestand(en) meegekopieerd naar %s" % (aantal, doelmap))
     return 0
 
 

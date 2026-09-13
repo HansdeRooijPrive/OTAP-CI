@@ -61,10 +61,24 @@ jobs:
 
       - name: Bouw alle omgevingen
         run: |
+          # Per branch: met build.py -> bouwen via het platform (inclusief public/).
+          # Zonder build.py maar met index.html -> branch staat nog niet op het
+          # platform (bijv. tijdens onboarding) en wordt ongewijzigd gepubliceerd.
+          bouw () {  # $1=map  $2=omgeving  $3=doelmap
+            if [ -f "$1/build.py" ]; then
+              (cd "$1" && python build.py --env="$2" --out "../$3/index.html")
+            elif [ -f "$1/index.html" ]; then
+              echo "::notice::'$1' heeft nog geen build.py: branch wordt ongewijzigd gepubliceerd (nog niet op het platform)."
+              mkdir -p "$3"
+              rsync -a --exclude '.*' --exclude 'README.md' "$1/" "$3/"
+            else
+              echo "::warning::'$1' heeft geen build.py en geen index.html: overgeslagen."
+            fi
+          }
           mkdir -p dist
-          (cd prod && python build.py --env=prod --out ../dist/index.html)
-          if [ -f acc/build.py ];  then (cd acc  && python build.py --env=acc  --out ../dist/acceptatie/index.html); fi
-          if [ -f test/build.py ]; then (cd test && python build.py --env=test --out ../dist/test/index.html); fi
+          bouw prod prod dist
+          if [ -d acc ];  then bouw acc  acc  dist/acceptatie; fi
+          if [ -d test ]; then bouw test test dist/test; fi
 
       - id: upload
         uses: actions/upload-pages-artifact@v3
