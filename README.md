@@ -93,11 +93,15 @@ productie-worker verzoeken onder `acceptatie/` en `test/` negeren.
 
 ### Branches die nog niet op het platform staan
 
-Heeft een branch geen `build.py` maar wel een `index.html` (bijvoorbeeld `main`
-tijdens het onboarden van een bestaande app), dan publiceert `deploy.yml` die
-branch ongewijzigd, zonder de verborgen bestanden en `README.md`. In het log staat
-dan een melding. Zo blijft productie gewoon online terwijl `development` al op het
-platform draait.
+Een branch geldt als platform-app als hij zowel `build.py` als `app.json` heeft.
+Heeft een branch geen `app.json` maar wel een `index.html` (bijvoorbeeld `main`
+tijdens het onboarden van een bestaande app, ook als die een eigen, oude
+`build.py` heeft), dan publiceert `deploy.yml` die branch ongewijzigd, zonder de
+verborgen bestanden en `README.md`. In het log staat dan een melding. Zo blijft
+productie gewoon online terwijl `development` al op het platform draait.
+
+Staat er na het bouwen van een omgeving geen `index.html`, dan stopt de deploy
+met een foutmelding. Er gaat dus nooit een lege site live.
 
 ## Herbruikbare workflows
 
